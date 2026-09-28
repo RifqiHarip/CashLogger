@@ -16,7 +16,8 @@ sealed class UiState {
         val totalKas: Double,
         val submittedName: String,
         val submittedAmount: Int,
-        val submittedType: String
+        val submittedType: String,
+        val submittedDesc: String?,
     ) : UiState()
     data class Error(val message: String) : UiState()
 }
@@ -47,7 +48,7 @@ class KasViewModel : ViewModel() {
         }
     }
 
-    fun submitData(name: String, amount: String, weekNumber: String, isPemasukan: Boolean) {
+    fun submitData(name: String, amount: String, weekNumber: String, description: String, isPemasukan: Boolean) {
         val amountInt = amount.replace(Regex("[^0-9]"), "").toIntOrNull()
         if (name.isBlank() || amountInt == null) {
             _uiState.value = UiState.Error("Nama dan Nominal harus diisi dengan benar.")
@@ -56,12 +57,13 @@ class KasViewModel : ViewModel() {
 
         val type = if (isPemasukan) "pemasukan" else "pengeluaran"
         val week = if (isPemasukan) weekNumber.ifBlank { null } else null
+        val desc = description.ifBlank { null }
 
         _uiState.value = UiState.Loading
 
         viewModelScope.launch {
             try {
-                val request = KasRequest(name, amountInt, week, type)
+                val request = KasRequest(name, amountInt, week, type, desc)
                 val response = RetrofitClient.apiService.submitKas(request)
 
                 if (response.status == "success") {
@@ -73,7 +75,8 @@ class KasViewModel : ViewModel() {
                         totalKas = response.totalKasSekarang ?: 0.0,
                         submittedName = name,
                         submittedAmount = amountInt,
-                        submittedType = type
+                        submittedType = type,
+                        submittedDesc = desc
                     )
                 } else {
                     _uiState.value = UiState.Error("Gagal: ${response.message}")

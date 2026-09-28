@@ -25,6 +25,7 @@ fun KasScreen(viewModel: KasViewModel = viewModel()) {
     var name by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var weekNumber by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") } // Variabel Baru
     var isPemasukan by remember { mutableStateOf(true) }
     val totalKasDepan by viewModel.totalKas.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -39,6 +40,7 @@ fun KasScreen(viewModel: KasViewModel = viewModel()) {
             name = ""
             amount = ""
             weekNumber = ""
+            description = ""
         }
     }
 
@@ -110,6 +112,7 @@ fun KasScreen(viewModel: KasViewModel = viewModel()) {
                                     Text("Tipe: ${successState.submittedType.replaceFirstChar { it.uppercase() }}",fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = Color.DarkGray)
                                     Text("Nama: ${successState.submittedName}",fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = Color.DarkGray)
                                     Text("Nominal: ${formatRupiah.format(successState.submittedAmount)}",fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = Color.DarkGray)
+                                    Text("Keterangan: ${successState.submittedDesc}",fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = Color.DarkGray)
                                 }
                             }
 
@@ -157,7 +160,7 @@ fun KasScreen(viewModel: KasViewModel = viewModel()) {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(if (isPemasukan) "Nama Anggota" else "Keterangan Pengeluaran",fontFamily = PlusJakartaSansFontFamily) },
+                label = { Text("Nama Anggota",fontFamily = PlusJakartaSansFontFamily) },
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
             )
 
@@ -169,13 +172,19 @@ fun KasScreen(viewModel: KasViewModel = viewModel()) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
             )
 
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Keterangan Tambahan") },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+            )
+
             if (isPemasukan) {
                 OutlinedTextField(
                     value = weekNumber,
                     onValueChange = { weekNumber = it },
-                    label = { Text("Minggu Ke- (Opsional)",fontFamily = PlusJakartaSansFontFamily) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    label = { Text("Minggu/Periode (Contoh: Minggu 1 / Bulan Juli)") },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                 )
             } else {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -190,7 +199,7 @@ fun KasScreen(viewModel: KasViewModel = viewModel()) {
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
-                onClick = { viewModel.submitData(name, amount, weekNumber, isPemasukan) },
+                onClick = { viewModel.submitData(name, amount, weekNumber, description, isPemasukan) },
                 colors = ButtonDefaults.buttonColors(containerColor = KstcGold),
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(8.dp),
