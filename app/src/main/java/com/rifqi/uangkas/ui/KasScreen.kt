@@ -45,7 +45,7 @@ fun KasScreen(viewModel: KasViewModel = viewModel()) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("KSTC Kas Logger", color = KstcGold,fontFamily = PlusJakartaSansFontFamily, fontWeight = FontWeight.Bold) },
+                title = { Text("Cash Logger", color = KstcGold,fontFamily = PlusJakartaSansFontFamily, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = KstcDarkGreen)
             )
         }
