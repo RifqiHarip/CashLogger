@@ -10,8 +10,9 @@ data class KasRequest(
     val name: String,
     val amount: Int,
     val weekNumber: String?,
-    val type: String // "pemasukan" atau "pengeluaran"
-)
+    val type: String, // "pemasukan" atau "pengeluaran"
+    val description: String?
+    )
 
 // Response Payload
 data class KasResponse(
