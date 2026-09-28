@@ -3,6 +3,7 @@ package com.rifqi.uangkas.data.network
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 // Request Payload
 data class KasRequest(
@@ -21,10 +22,11 @@ data class KasResponse(
 
 // Retrofit Interface
 interface GasApiService {
-    // GANTI DENGAN URL WEB APP ANDA (Jangan sertakan https://script.google.com/)
-    // Cukup endpoint-nya saja karena base URL diatur di Retrofit Builder
-    @POST("YOUR_SCRIPT_ENDPOINT")
+    @POST("YOUR_ENDPOINT")
     suspend fun submitKas(@Body request: KasRequest): KasResponse
+
+    @GET("YOUR_ENDPOINT")
+    suspend fun getTotalKas(): KasResponse
 }
 
 // Retrofit Object Builder

@@ -11,13 +11,41 @@ import kotlinx.coroutines.launch
 sealed class UiState {
     object Idle : UiState()
     object Loading : UiState()
-    data class Success(val message: String, val totalKas: Double) : UiState()
+    data class Success(
+        val message: String,
+        val totalKas: Double,
+        val submittedName: String,
+        val submittedAmount: Int,
+        val submittedType: String
+    ) : UiState()
     data class Error(val message: String) : UiState()
 }
 
 class KasViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
+
+    // STATE BARU KHUSUS UNTUK MENAMPILKAN TOTAL KAS DI HALAMAN DEPAN
+    private val _totalKas = MutableStateFlow<Double?>(null)
+    val totalKas: StateFlow<Double?> = _totalKas
+
+    // Otomatis tarik data total kas saat aplikasi dibuka
+    init {
+        fetchTotalKas()
+    }
+
+    private fun fetchTotalKas() {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.getTotalKas()
+                if (response.status == "success") {
+                    _totalKas.value = response.totalKasSekarang
+                }
+            } catch (e: Exception) {
+                // Jika gagal (misal tidak ada internet), biarkan null
+            }
+        }
+    }
 
     fun submitData(name: String, amount: String, weekNumber: String, isPemasukan: Boolean) {
         val amountInt = amount.replace(Regex("[^0-9]"), "").toIntOrNull()
@@ -37,9 +65,15 @@ class KasViewModel : ViewModel() {
                 val response = RetrofitClient.apiService.submitKas(request)
 
                 if (response.status == "success") {
+                    // Update juga nilai total kas di dashboard depan
+                    _totalKas.value = response.totalKasSekarang
+
                     _uiState.value = UiState.Success(
                         message = response.message,
-                        totalKas = response.totalKasSekarang ?: 0.0
+                        totalKas = response.totalKasSekarang ?: 0.0,
+                        submittedName = name,
+                        submittedAmount = amountInt,
+                        submittedType = type
                     )
                 } else {
                     _uiState.value = UiState.Error("Gagal: ${response.message}")
@@ -48,5 +82,9 @@ class KasViewModel : ViewModel() {
                 _uiState.value = UiState.Error("Koneksi Gagal: ${e.localizedMessage}")
             }
         }
+    }
+
+    fun resetState() {
+        _uiState.value = UiState.Idle
     }
 }
