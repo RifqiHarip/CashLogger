@@ -9,6 +9,7 @@ A native Android application built with Kotlin and Jetpack Compose, designed to 
 * **Fluid UI/UX:** Built entirely with Jetpack Compose featuring custom fonts (Plus Jakarta Sans), a branded Dark Green and Gold color scheme, and fluid spring-physics animations for a premium feel.
 * **Smart State Management:** Forms automatically clear upon successful submission.
 * **Interactive Confirmations:** Displays a clean, native `AlertDialog` summarizing the successfully submitted data and the updated total balance.
+* **Animated Splash Screen:** Engaging app launch experience with custom logo and smooth spring-physics scaling animations before transitioning to the dashboard.
 
 ## 🛠️ Tech Stack & Architecture
 
