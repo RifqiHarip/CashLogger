@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rifqi.uangkas.data.network.KasRequest
 import com.rifqi.uangkas.data.network.RetrofitClient
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -30,20 +32,38 @@ class KasViewModel : ViewModel() {
     private val _totalKas = MutableStateFlow<Double?>(null)
     val totalKas: StateFlow<Double?> = _totalKas
 
-    // Otomatis tarik data total kas saat aplikasi dibuka
+    // STATE UNTUK ANIMASI TOMBOL REFRESH
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    // Otomatis jalankan auto-refresh saat aplikasi dibuka
     init {
-        fetchTotalKas()
+        startAutoRefresh()
     }
 
-    private fun fetchTotalKas() {
+    // Fungsi Auto-Refresh setiap 30 detik
+    private fun startAutoRefresh() {
         viewModelScope.launch {
+            while (isActive) {
+                fetchTotalKas()
+                delay(30_000) // Jeda 30 detik
+            }
+        }
+    }
+
+    // Ubah jadi public (hapus private) agar bisa dipanggil dari tombol UI
+    fun fetchTotalKas() {
+        viewModelScope.launch {
+            _isRefreshing.value = true // Nyalakan animasi muter
             try {
                 val response = RetrofitClient.apiService.getTotalKas()
                 if (response.status == "success") {
                     _totalKas.value = response.totalKasSekarang
                 }
             } catch (e: Exception) {
-                // Jika gagal (misal tidak ada internet), biarkan null
+                // Jika gagal (misal tidak ada internet), biarkan state sebelumnya
+            } finally {
+                _isRefreshing.value = false // Matikan animasi muter
             }
         }
     }

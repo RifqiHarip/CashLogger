@@ -3,6 +3,7 @@ package com.rifqi.uangkas
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -19,7 +20,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            UangKasTheme {
+            // 1. Deteksi tema bawaan HP (True jika Dark, False jika Light)
+            val systemTheme = isSystemInDarkTheme()
+
+            // 2. State tema yang mengikuti sistem HP sebagai default,
+            // tapi bisa diubah manual lewat slider di KasScreen
+            var isDarkTheme by remember(systemTheme) { mutableStateOf(systemTheme) }
+
+            // 3. Masukkan variable isDarkTheme ke parameter UangKasTheme
+            UangKasTheme(darkTheme = isDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -34,7 +43,11 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     } else {
-                        KasScreen()
+                        // 4. Teruskan state tema ke KasScreen agar slider berfungsi
+                        KasScreen(
+                            isDarkTheme = isDarkTheme,
+                            onThemeChange = { isDarkTheme = it }
+                        )
                     }
                 }
             }

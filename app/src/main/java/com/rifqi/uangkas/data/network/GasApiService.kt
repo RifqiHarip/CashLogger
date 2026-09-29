@@ -5,6 +5,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 // Request Payload
 data class KasRequest(
     val name: String,
@@ -23,6 +26,7 @@ data class KasResponse(
 
 // Retrofit Interface
 interface GasApiService {
+    // YOUR_ENDPOINT
     @POST("YOUR_ENDPOINT")
     suspend fun submitKas(@Body request: KasRequest): KasResponse
 
@@ -32,10 +36,17 @@ interface GasApiService {
 
 // Retrofit Object Builder
 object RetrofitClient {
+
+    private val okHttpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
+
     val apiService: GasApiService by lazy {
         Retrofit.Builder()
-            // Gunakan BuildConfig untuk BASE_URL
             .baseUrl("https://script.google.com/")
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(GasApiService::class.java)
