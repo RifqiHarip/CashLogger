@@ -4,34 +4,37 @@ A native Android application built with Kotlin and Jetpack Compose, designed to 
 
 ## ✨ Features
 
-* **Real-time Total Cash Dashboard:** Instantly fetches and displays the current total cash balance from the Google Sheets backend the moment the app is launched.
-* **Seamless Cash Entry:** Easily toggle between *Pemasukan* (Income) and *Pengeluaran* (Expense) to record transactions, with an optional field for the week number.
-* **Fluid UI/UX:** Built entirely with Jetpack Compose featuring custom fonts (Plus Jakarta Sans), a branded Dark Green and Gold color scheme, and fluid spring-physics animations for a premium feel.
-* **Smart State Management:** Forms automatically clear upon successful submission.
-* **Interactive Confirmations:** Displays a clean, native `AlertDialog` summarizing the successfully submitted data and the updated total balance.
-* **Animated Splash Screen:** Engaging app launch experience with custom logo and smooth spring-physics scaling animations before transitioning to the dashboard.
+- **Real-time Total Cash Dashboard:** Instantly fetches and displays the current total cash balance from the Google Sheets backend the moment the app is launched.
+- **Adaptive Dark Mode:** Fully supports system-level Dark/Light themes with a manual override switch, adapting input fields and popup dialogs for optimal readability.
+- **Recent Transaction History:** Automatically fetches and displays a scrollable list of the latest transactions directly below the input form.
+- **Smart Input Validation & Formatting:** Real-time `VisualTransformation` automatically formats currency inputs with "Rp" and thousands separators while typing. Built-in validation prevents empty submissions and double-clicks by utilizing interactive loading states.
+- **Seamless Cash Entry:** Easily toggle between *Pemasukan* (Income) and *Pengeluaran* (Expense) to record transactions, with an optional field for the week number.
+- **Quick Access to Raw Data:** Includes a dedicated text button to instantly open the connected Google Sheets in the browser/app for manual database review.
+- **Fluid UI/UX:** Built entirely with Jetpack Compose featuring custom fonts (Plus Jakarta Sans), a branded Dark Green and Gold color scheme, and fluid spring-physics animations for a premium feel.
+- **Interactive Confirmations:** Displays a clean, native `AlertDialog` summarizing the successfully submitted data and the updated total balance.
+- **Animated Splash Screen:** Engaging app launch experience with custom logo and smooth spring-physics scaling animations before transitioning to the dashboard.
 
 ## 🛠️ Tech Stack & Architecture
 
-* **Language:** [Kotlin](https://kotlinlang.org/)
-* **UI Toolkit:** [Jetpack Compose](https://developer.android.com/jetpack/compose) (Material Design 3)
-* **Architecture:** MVVM (Model-View-ViewModel) with `StateFlow` for reactive state management.
-* **Networking:** [Retrofit 2](https://square.github.io/retrofit/) & [GSON Converter](https://github.com/google/gson) for API communication.
-* **Asynchronous Operations:** Kotlin Coroutines.
-* **Backend / Database:** Google Sheets + Google Apps Script (Serverless Web App).
+- **Language:** [Kotlin](https://kotlinlang.org/)
+- **UI Toolkit:** [Jetpack Compose](https://developer.android.com/jetpack/compose) (Material Design 3)
+- **Architecture:** MVVM (Model-View-ViewModel) with `StateFlow` for reactive state management.
+- **Networking:** [Retrofit 2](https://square.github.io/retrofit/) & [GSON Converter](https://github.com/google/gson) for API communication.
+- **Asynchronous Operations:** Kotlin Coroutines.
+- **Backend / Database:** Google Sheets + Google Apps Script (Serverless Web App).
 
 ## 📁 Project Structure highlights
-* `ui/KasScreen.kt`: The main Compose UI containing the dashboard, form, and dialogs.
-* `ui/KasViewModel.kt`: Handles the business logic, state handling (`UiState`), and asynchronous network calls.
-* `data/network/GasApiService.kt`: The Retrofit client interface defining the `GET` and `POST` endpoints.
-* `AppConfig.kt`: A secure, pure-Kotlin configuration object to store the GAS Webhook endpoint, bypassing traditional `BuildConfig` limitations.
-* `ui/theme/`: Custom color palettes (`KstcDarkGreen`, `KstcGold`) and Typography configurations.
+- `ui/KasScreen.kt`: The main Compose UI containing the dashboard, transaction history, form, and dialogs.
+- `ui/KasViewModel.kt`: Handles the business logic, state handling (`UiState`), and asynchronous network calls.
+- `data/network/GasApiService.kt`: The Retrofit client interface defining the `GET` and `POST` endpoints.
+- `AppConfig.kt`: A secure, pure-Kotlin configuration object to store the GAS Webhook endpoint, bypassing traditional `BuildConfig` limitations.
+- `ui/theme/`: Custom color palettes (`KstcDarkGreen`, `KstcGold`) and Typography configurations.
 
 ## 🚀 Setup and Installation
 
 ### 1. Backend Setup (Google Sheets)
 1. Create a new Google Sheet.
-2. Go to **Extensions > Apps Script** and write your `doGet(e)` (to fetch total cash) and `doPost(e)` (to append new rows) functions.
+2. Go to **Extensions > Apps Script** and write your `doGet(e)` (to fetch total cash and recent transactions) and `doPost(e)` (to append new rows with instant math calculations) functions.
 3. Deploy the script as a **Web App** with access set to **"Anyone"**.
 4. Copy the deployment URL. *(Note: Always redeploy as a "New Version" whenever you make changes to the script).*
 
