@@ -16,12 +16,20 @@ data class KasRequest(
     val type: String, // "pemasukan" atau "pengeluaran"
     val description: String?
     )
-
+data class TransactionItem(
+    val timestamp: String,
+    val name: String,
+    val weekNumber: String,
+    val type: String,
+    val amount: Double,
+    val description: String
+)
 // Response Payload
 data class KasResponse(
     val status: String,
     val message: String,
-    val totalKasSekarang: Double?
+    val totalKasSekarang: Double?,
+    val recentTransactions: List<TransactionItem>? = null
 )
 
 // Retrofit Interface

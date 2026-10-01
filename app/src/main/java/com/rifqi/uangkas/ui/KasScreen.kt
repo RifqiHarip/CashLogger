@@ -25,6 +25,14 @@ import androidx.compose.foundation.Image
 import com.rifqi.uangkas.R
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.platform.LocalUriHandler
+
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,12 +48,17 @@ fun KasScreen(
     var isPemasukan by remember { mutableStateOf(true) }
 
     val totalKasDepan by viewModel.totalKas.collectAsState()
+    val transactions by viewModel.recentTransactions.collectAsState()
+    val scrollState = rememberScrollState() // 1. Buat state scroll
+
     val isRefreshing by viewModel.isRefreshing.collectAsState() // State animasi refresh
     val uiState by viewModel.uiState.collectAsState()
 
     val formatRupiah = NumberFormat.getCurrencyInstance(Locale("id", "ID")).apply {
         maximumFractionDigits = 0
     }
+    val uriHandler = LocalUriHandler.current
+    val sheetUrl = "https://docs.google.com/spreadsheets/d/1qG-k1CiNxzZ-BO_n_JY4eKkWlccsTis5TXr8boMcBtE/edit?usp=sharing"
 
     // Clear Form saat status Success
     LaunchedEffect(uiState) {
@@ -101,6 +114,7 @@ fun KasScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(scrollState)
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -163,29 +177,34 @@ fun KasScreen(
             }
 
             // --- POPUP DIALOG BERHASIL ---
+            // --- POPUP DIALOG BERHASIL ---
             if (uiState is UiState.Success) {
                 val successState = uiState as UiState.Success
 
                 AlertDialog(
                     onDismissRequest = { viewModel.resetState() },
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    // Warna popup menyesuaikan tema
+                    containerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color.White,
                     title = {
-                        Text("✅ Berhasil Disimpan", color = KstcDarkGreen,fontFamily = PlusJakartaSansFontFamily, fontWeight = FontWeight.Bold)
+                        Text("✅ Berhasil Disimpan", color = if (isDarkTheme) KstcGold else KstcDarkGreen, fontFamily = PlusJakartaSansFontFamily, fontWeight = FontWeight.Bold)
                     },
                     text = {
                         Column {
                             // Rincian Input
                             Card(
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                                // Warna kartu rincian: Hijau pudar gelap (Dark Mode) vs Hijau muda (Light Mode)
+                                colors = CardDefaults.cardColors(containerColor = if (isDarkTheme) Color(0xFF2D3730) else Color(0xFFE8F5E9)),
                                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
-                                    Text("Rincian Input:", fontWeight = FontWeight.Bold, color = KstcDarkGreen,fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp)
+                                    val textColor = if (isDarkTheme) Color(0xFFE0E0E0) else Color.DarkGray
+
+                                    Text("Rincian Input:", fontWeight = FontWeight.Bold, color = if (isDarkTheme) Color.White else KstcDarkGreen, fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp)
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Tipe: ${successState.submittedType.replaceFirstChar { it.uppercase() }}",fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("Nama: ${successState.submittedName}",fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("Nominal: ${formatRupiah.format(successState.submittedAmount)}",fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("Keterangan: ${successState.submittedDesc}",fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("Tipe: ${successState.submittedType.replaceFirstChar { it.uppercase() }}", fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = textColor)
+                                    Text("Nama: ${successState.submittedName}", fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = textColor)
+                                    Text("Nominal: ${formatRupiah.format(successState.submittedAmount)}", fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = textColor)
+                                    Text("Keterangan: ${successState.submittedDesc}", fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = textColor)
                                 }
                             }
 
@@ -198,15 +217,16 @@ fun KasScreen(
                                     modifier = Modifier.padding(12.dp).fillMaxWidth(),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Text("TOTAL KAS TERBARU", color = KstcDarkGreen, fontWeight = FontWeight.Bold,fontFamily = PlusJakartaSansFontFamily, fontSize = 12.sp)
-                                    Text(formatRupiah.format(successState.totalKas), fontSize = 20.sp, color = Color.White,fontFamily = PlusJakartaSansFontFamily, fontWeight = FontWeight.Bold)
+                                    // Teks menggunakan Dark Green agar terlihat sangat jelas di atas background Gold
+                                    Text("TOTAL KAS TERBARU", color = KstcDarkGreen, fontWeight = FontWeight.Bold, fontFamily = PlusJakartaSansFontFamily, fontSize = 12.sp)
+                                    Text(formatRupiah.format(successState.totalKas), fontSize = 20.sp, color = KstcDarkGreen, fontFamily = PlusJakartaSansFontFamily, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
                     },
                     confirmButton = {
                         TextButton(onClick = { viewModel.resetState() }) {
-                            Text("Tutup", color = KstcDarkGreen,fontFamily = PlusJakartaSansFontFamily, fontWeight = FontWeight.Bold)
+                            Text("Tutup", color = if (isDarkTheme) KstcGold else KstcDarkGreen, fontFamily = PlusJakartaSansFontFamily, fontWeight = FontWeight.Bold)
                         }
                     }
                 )
@@ -241,6 +261,8 @@ fun KasScreen(
                 value = amount,
                 onValueChange = { amount = it },
                 label = { Text("Nominal (Rp.)",fontFamily = PlusJakartaSansFontFamily) },
+                prefix = { Text("Rp ", fontFamily = PlusJakartaSansFontFamily) },
+                visualTransformation = RupiahVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
             )
@@ -286,6 +308,134 @@ fun KasScreen(
                     fontSize = 16.sp
                 )
             }
+            TextButton(
+                onClick = {
+                    // Ini akan otomatis membuka browser atau aplikasi Google Sheets di HP
+                    uriHandler.openUri(sheetUrl)
+                },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text(
+                    text = "Buka Google Sheets",
+                    color = if (isDarkTheme) Color.LightGray else Color.Gray,
+                    fontFamily = PlusJakartaSansFontFamily,
+                    textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline // Memberikan efek garis bawah
+                )
+            }
+            // ... di dalam Column utama KasScreen, di bagian bawah setelah tombol Google Sheets ...
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Riwayat Transaksi Terakhir",
+                color = if (isDarkTheme) Color.White else KstcDarkGreen,
+                fontWeight = FontWeight.Bold,
+                fontFamily = PlusJakartaSansFontFamily,
+                fontSize = 16.sp,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            // Asumsi Anda menyimpan list transaksi di ViewModel (misal: viewModel.recentTransactions)
+
+            if (transactions.isEmpty()) {
+                Text(
+                    text = "Belum ada riwayat transaksi",
+                    color = Color.Gray,
+                    fontFamily = PlusJakartaSansFontFamily,
+                    fontSize = 13.sp
+                )
+            } else {
+                // Tampilkan list card kecil untuk setiap transaksi
+                Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                    transactions.forEach { item ->
+                        val isPemasukan = item.type.equals("pemasukan", ignoreCase = true)
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color.White
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = item.name,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = PlusJakartaSansFontFamily,
+                                        color = if (isDarkTheme) Color.White else Color.Black,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = "${item.weekNumber} • ${item.description}",
+                                        fontFamily = PlusJakartaSansFontFamily,
+                                        color = Color.Gray,
+                                        fontSize = 12.sp
+                                    )
+                                }
+
+                                // Nominal dengan warna hijau untuk pemasukan, merah/pink untuk pengeluaran
+                                Text(
+                                    text = "${if (isPemasukan) "+" else "-"} ${formatRupiah.format(item.amount)}",
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = PlusJakartaSansFontFamily,
+                                    color = if (isPemasukan) Color(0xFF2E7D32) else Color(0xFFC62828),
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+class RupiahVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val original = text.text
+        if (original.isEmpty()) return TransformedText(text, OffsetMapping.Identity)
+
+        // Format angka dengan titik setiap 3 digit
+        val formatted = original.reversed().chunked(3).joinToString(".").reversed()
+
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                if (offset <= 0) return 0
+                if (offset >= original.length) return formatted.length
+
+                var transformedOffset = 0
+                var originalCharCount = 0
+                for (char in formatted) {
+                    if (originalCharCount == offset) break
+                    if (char != '.') {
+                        originalCharCount++
+                    }
+                    transformedOffset++
+                }
+                return transformedOffset
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 0) return 0
+                if (offset >= formatted.length) return original.length
+
+                var originalOffset = 0
+                var transformedCharCount = 0
+                for (char in formatted) {
+                    if (transformedCharCount == offset) break
+                    if (char != '.') {
+                        originalOffset++
+                    }
+                    transformedCharCount++
+                }
+                return originalOffset
+            }
+        }
+        return TransformedText(AnnotatedString(formatted), offsetMapping)
     }
 }

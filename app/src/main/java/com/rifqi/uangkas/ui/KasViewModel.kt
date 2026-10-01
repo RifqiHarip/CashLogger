@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rifqi.uangkas.data.network.KasRequest
 import com.rifqi.uangkas.data.network.RetrofitClient
+import com.rifqi.uangkas.data.network.TransactionItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,10 @@ class KasViewModel : ViewModel() {
     private val _totalKas = MutableStateFlow<Double?>(null)
     val totalKas: StateFlow<Double?> = _totalKas
 
+    // State untuk menyimpan daftar riwayat transaksi
+// --- UBAH DARI mutableStateOf MENJADI MutableStateFlow ---
+    private val _recentTransactions = MutableStateFlow<List<TransactionItem>>(emptyList())
+    val recentTransactions: StateFlow<List<TransactionItem>> = _recentTransactions
     // STATE UNTUK ANIMASI TOMBOL REFRESH
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
@@ -59,6 +64,9 @@ class KasViewModel : ViewModel() {
                 val response = RetrofitClient.apiService.getTotalKas()
                 if (response.status == "success") {
                     _totalKas.value = response.totalKasSekarang
+                    response.recentTransactions?.let {
+                        _recentTransactions.value = it
+                    }
                 }
             } catch (e: Exception) {
                 // Jika gagal (misal tidak ada internet), biarkan state sebelumnya
