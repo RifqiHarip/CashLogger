@@ -51,7 +51,7 @@ class KasViewModel : ViewModel() {
         viewModelScope.launch {
             while (isActive) {
                 fetchTotalKas()
-                delay(30_000) // Jeda 30 detik
+                delay(300_000) // Jeda 5 menit
             }
         }
     }
