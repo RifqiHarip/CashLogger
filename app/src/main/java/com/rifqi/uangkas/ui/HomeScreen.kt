@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.platform.LocalContext
 import android.content.Context
+import androidx.compose.foundation.layout.imePadding
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -44,10 +45,12 @@ fun HomeScreen(
     var weekNumber by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var isPemasukan by remember { mutableStateOf(true) }
+    // Default cashType diset ke "coaching"
+    var cashType by remember { mutableStateOf("coaching") }
 
     var expanded by remember { mutableStateOf(false) }
 
-    // Memuat data member yang tersimpan di HP, atau menggunakan daftar default baru jika belum ada
+    // Memuat data member lokal
     val memberList = remember {
         val defaultMembers = setOf("Rifqi", "A. Ridho", "Adi", "Carlo", "Iskandar", "Garry")
         val savedMembers = sharedPreferences.getStringSet("saved_member_list", defaultMembers) ?: defaultMembers
@@ -56,9 +59,11 @@ fun HomeScreen(
         }
     }
 
-    // Filter daftar anggota dan urutkan hasilnya secara alfabetis
     val filteredOptions = memberList.filter { it.contains(name, ignoreCase = true) }.sortedWith(String.CASE_INSENSITIVE_ORDER)
-    val totalKasDepan by viewModel.totalKas.collectAsState()
+
+    // Asumsi di KasViewModel terdapat totalKasCoaching dan totalKasMabar
+    val totalKasCoaching by viewModel.totalKas.collectAsState()
+    val totalKasMabar by viewModel.totalKasMabar.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
@@ -85,10 +90,14 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
+                .imePadding()
                 .padding(horizontal = 16.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- KARTU TOTAL KAS ---
+            // --- KARTU HEADER TOTAL KAS (DINAMIS Sesuai Tipe Kas yang Dipilih) ---
+            val displayTotal = if (cashType.equals("mabar", ignoreCase = true)) totalKasMabar else totalKasCoaching
+            val cardTitle = if (cashType.equals("mabar", ignoreCase = true)) "TOTAL KAS MABAR" else "TOTAL KAS COACHING"
+
             Card(
                 colors = CardDefaults.cardColors(containerColor = KstcGold),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
@@ -99,14 +108,16 @@ fun HomeScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "TOTAL KAS KOMUNITAS",
+                            text = cardTitle,
                             color = KstcDarkGreen,
                             fontFamily = PlusJakartaSansFontFamily,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
                         )
-                        if (totalKasDepan != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        if (displayTotal != null) {
                             Text(
-                                text = formatRupiah.format(totalKasDepan),
+                                text = formatRupiah.format(displayTotal),
                                 fontSize = 28.sp,
                                 color = Color.White,
                                 fontFamily = PlusJakartaSansFontFamily,
@@ -123,6 +134,7 @@ fun HomeScreen(
             // --- POPUP DIALOG BERHASIL ---
             if (uiState is UiState.Success) {
                 val successState = uiState as UiState.Success
+                val isMabarSuccess = successState.submittedCashType.equals("mabar", ignoreCase = true)
 
                 AlertDialog(
                     onDismissRequest = { viewModel.resetState() },
@@ -142,6 +154,7 @@ fun HomeScreen(
                                     Text("Rincian Input:", fontWeight = FontWeight.Bold, color = if (isDarkTheme) Color.White else KstcDarkGreen, fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp)
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text("Tipe: ${successState.submittedType.replaceFirstChar { it.uppercase() }}", fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = textColor)
+                                    Text("Tipe Kas: ${if (isMabarSuccess) "Mabar" else "Coaching"}", fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = textColor)
                                     Text("Nama: ${successState.submittedName}", fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = textColor)
                                     Text("Nominal: ${formatRupiah.format(successState.submittedAmount)}", fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = textColor)
                                     Text("Keterangan: ${successState.submittedDesc}", fontFamily = PlusJakartaSansFontFamily, fontSize = 14.sp, color = textColor)
@@ -156,8 +169,13 @@ fun HomeScreen(
                                     modifier = Modifier.padding(12.dp).fillMaxWidth(),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Text("TOTAL KAS TERBARU", color = KstcDarkGreen, fontWeight = FontWeight.Bold, fontFamily = PlusJakartaSansFontFamily, fontSize = 12.sp)
-                                    Text(formatRupiah.format(successState.totalKas), fontSize = 20.sp, color = KstcDarkGreen, fontFamily = PlusJakartaSansFontFamily, fontWeight = FontWeight.Bold)
+                                    if (isMabarSuccess) {
+                                        Text("TOTAL KAS MABAR TERBARU", color = KstcDarkGreen, fontWeight = FontWeight.Bold, fontFamily = PlusJakartaSansFontFamily, fontSize = 12.sp)
+                                        Text(formatRupiah.format(successState.totalKasMabar), fontSize = 20.sp, color = KstcDarkGreen, fontFamily = PlusJakartaSansFontFamily, fontWeight = FontWeight.Bold)
+                                    } else {
+                                        Text("TOTAL KAS COACHING TERBARU", color = KstcDarkGreen, fontWeight = FontWeight.Bold, fontFamily = PlusJakartaSansFontFamily, fontSize = 12.sp)
+                                        Text(formatRupiah.format(successState.totalKas), fontSize = 20.sp, color = KstcDarkGreen, fontFamily = PlusJakartaSansFontFamily, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }
@@ -170,7 +188,33 @@ fun HomeScreen(
                 )
             }
 
-            // --- FORM INPUT ---
+            // --- SELEKSI TIPE KAS (Coaching / Mabar) ---
+            Text(
+                text = "PILIH TIPE KAS",
+                fontFamily = PlusJakartaSansFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = if (isDarkTheme) Color.LightGray else Color.DarkGray,
+                modifier = Modifier.align(Alignment.Start).padding(bottom = 6.dp)
+            )
+            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                Button(
+                    onClick = { cashType = "coaching" },
+                    colors = ButtonDefaults.buttonColors(containerColor = if (cashType.equals("coaching", ignoreCase = true)) KstcDarkGreen else MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.weight(1f).padding(end = 4.dp)
+                ) {
+                    Text("Coaching", color = if (cashType.equals("coaching", ignoreCase = true)) Color.White else MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = PlusJakartaSansFontFamily)
+                }
+                Button(
+                    onClick = { cashType = "mabar" },
+                    colors = ButtonDefaults.buttonColors(containerColor = if (cashType.equals("mabar", ignoreCase = true)) KstcDarkGreen else MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.weight(1f).padding(start = 4.dp)
+                ) {
+                    Text("Mabar", color = if (cashType.equals("mabar", ignoreCase = true)) Color.White else MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = PlusJakartaSansFontFamily)
+                }
+            }
+
+            // --- FORM INPUT PEMASUKAN / PENGELUARAN ---
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
                 Button(
                     onClick = { isPemasukan = true },
@@ -188,7 +232,7 @@ fun HomeScreen(
                 }
             }
 
-            // --- AUTOCOMPLETE DROPDOWN DENGAN DEFAULT BARU & PENYIMPANAN PERMANEN ---
+            // --- AUTOCOMPLETE DROPDOWN NAMA ANGGOTA ---
             ExposedDropdownMenuBox(
                 expanded = expanded,
                 onExpandedChange = { expanded = !expanded },
@@ -234,7 +278,6 @@ fun HomeScreen(
                             },
                             onClick = {
                                 memberList.add(name)
-                                // Simpan perubahan secara permanen ke SharedPreferences HP
                                 sharedPreferences.edit()
                                     .putStringSet("saved_member_list", memberList.toSet())
                                     .apply()
@@ -283,7 +326,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { viewModel.submitData(name, amount, weekNumber, description, isPemasukan) },
+                onClick = { viewModel.submitData(name, amount, weekNumber, description, isPemasukan, cashType) },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = KstcGold,
                     contentColor = KstcDarkGreen,
@@ -319,8 +362,7 @@ fun HomeScreen(
             }
         }
     }
-}
-class RupiahVisualTransformation : VisualTransformation {
+}class RupiahVisualTransformation : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val original = text.text
         if (original.isEmpty()) return TransformedText(text, OffsetMapping.Identity)

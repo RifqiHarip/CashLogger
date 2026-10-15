@@ -17,11 +17,13 @@ sealed class UiState {
     data class Success(
         val message: String,
         val totalKas: Double,
+        val totalKasMabar: Double,
         val submittedName: String,
         val submittedAmount: Int,
         val submittedType: String,
         val submittedDesc: String?,
-    ) : UiState()
+        val submittedCashType: String?,
+        ) : UiState()
     data class Error(val message: String) : UiState()
 }
 
@@ -31,7 +33,10 @@ class KasViewModel : ViewModel() {
 
     // STATE BARU KHUSUS UNTUK MENAMPILKAN TOTAL KAS DI HALAMAN DEPAN
     private val _totalKas = MutableStateFlow<Double?>(null)
+    private val _totalKasMabar = MutableStateFlow<Double?>(null)
+
     val totalKas: StateFlow<Double?> = _totalKas
+    val totalKasMabar: StateFlow<Double?> = _totalKasMabar
 
     // State untuk menyimpan daftar riwayat transaksi
 // --- UBAH DARI mutableStateOf MENJADI MutableStateFlow ---
@@ -63,7 +68,8 @@ class KasViewModel : ViewModel() {
             try {
                 val response = RetrofitClient.apiService.getTotalKas()
                 if (response.status == "success") {
-                    _totalKas.value = response.totalKasSekarang
+                    _totalKas.value = response.totalKasCoaching
+                    _totalKasMabar.value = response.totalKasMabar
                     response.recentTransactions?.let {
                         _recentTransactions.value = it
                     }
@@ -76,7 +82,7 @@ class KasViewModel : ViewModel() {
         }
     }
 
-    fun submitData(name: String, amount: String, weekNumber: String, description: String, isPemasukan: Boolean) {
+    fun submitData(name: String, amount: String, weekNumber: String, description: String, isPemasukan: Boolean, cashType: String) {
         val amountInt = amount.replace(Regex("[^0-9]"), "").toIntOrNull()
         if (name.isBlank() || amountInt == null) {
             _uiState.value = UiState.Error("Nama dan Nominal harus diisi dengan benar.")
@@ -86,24 +92,29 @@ class KasViewModel : ViewModel() {
         val type = if (isPemasukan) "pemasukan" else "pengeluaran"
         val week = if (isPemasukan) weekNumber.ifBlank { null } else null
         val desc = description.ifBlank { null }
+        val cash = cashType.ifBlank { null }
+
 
         _uiState.value = UiState.Loading
 
         viewModelScope.launch {
             try {
-                val request = KasRequest(name, amountInt, week, type, desc)
+                val request = KasRequest(name, amountInt, week, type, desc,cash)
                 val response = RetrofitClient.apiService.submitKas(request)
 
                 if (response.status == "success") {
                     // Update juga nilai total kas di dashboard depan
-                    _totalKas.value = response.totalKasSekarang
+                    _totalKas.value = response.totalKasCoaching
+                    _totalKasMabar.value = response.totalKasMabar
 
                     _uiState.value = UiState.Success(
                         message = response.message,
-                        totalKas = response.totalKasSekarang ?: 0.0,
+                        totalKas = response.totalKasCoaching ?: 0.0,
+                        totalKasMabar = response.totalKasMabar ?: 0.0,
                         submittedName = name,
                         submittedAmount = amountInt,
                         submittedType = type,
+                        submittedCashType = cash,
                         submittedDesc = desc
                     )
                 } else {

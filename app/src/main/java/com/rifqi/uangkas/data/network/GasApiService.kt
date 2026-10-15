@@ -14,7 +14,8 @@ data class KasRequest(
     val amount: Int,
     val weekNumber: String?,
     val type: String, // "pemasukan" atau "pengeluaran"
-    val description: String?
+    val description: String?,
+    val cashType: String?,
     )
 data class TransactionItem(
     val timestamp: String,
@@ -22,19 +23,23 @@ data class TransactionItem(
     val weekNumber: String,
     val type: String,
     val amount: Double,
-    val description: String
+    val description: String,
+    val cashType: String
 )
 // Response Payload
 data class KasResponse(
     val status: String,
     val message: String,
-    val totalKasSekarang: Double?,
+    val totalKasCoaching: Double?,
+    val totalKasMabar: Double?,
     val recentTransactions: List<TransactionItem>? = null
 )
 
 // Retrofit Interface
 interface GasApiService {
     // YOUR_ENDPOINT
+    // macros/s/AKfycbxfC4BfNepCntX9ZbP0GlCiJwmkMaDtU721NrlQiOIfmnlzX0Etxq1kqXdppvIRjNItQg/exec Main
+    // macros/s/AKfycbydvnqd7FHPKuQizGoJhLjV_v6NBhXUUu49r-dnmKUG8cf219XWEyyEUzu0JbFKhCXtDg/exec Dev
     @POST("YOUR_ENDPOINT")
     suspend fun submitKas(@Body request: KasRequest): KasResponse
 
