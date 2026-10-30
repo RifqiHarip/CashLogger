@@ -13,8 +13,8 @@ android {
         applicationId = "com.rifqi.uangkas"
         minSdk = 24
         targetSdk = 37
-        versionCode = 5
-        versionName = "1.4.1"
+        versionCode = 6
+        versionName = "1.4.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -54,6 +54,9 @@ dependencies {
     // ViewModel & Coroutines (Untuk Manajemen State di Compose)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // Live Location Implementation
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

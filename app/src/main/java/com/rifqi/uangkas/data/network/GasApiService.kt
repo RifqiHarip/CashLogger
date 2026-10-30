@@ -45,7 +45,7 @@ interface GasApiService {
     @POST("YOUR_ENDPOINT")
     suspend fun submitKas(@Body request: KasRequest): KasResponse
 
-//    @GET("macros/s/AKfycbydvnqd7FHPKuQizGoJhLjV_v6NBhXUUu49r-dnmKUG8cf219XWEyyEUzu0JbFKhCXtDg/exec")
+//    @GET("YOUR_ENDPOINT")
 //    suspend fun getTotalKas(): KasResponse
     @GET("YOUR_ENDPOINT")
     suspend fun getTotalKas(
