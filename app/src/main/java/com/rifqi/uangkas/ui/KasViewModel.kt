@@ -19,11 +19,11 @@ sealed class UiState {
         val totalKas: Double,
         val totalKasMabar: Double,
         val submittedName: String,
-        val submittedAmount: Int,
+        val submittedAmount: Long,
         val submittedType: String,
         val submittedDesc: String?,
-        val submittedCashType: String?,
-        ) : UiState()
+        val submittedCashType: String?
+    ) : UiState()
     data class Error(val message: String) : UiState()
 }
 
@@ -31,60 +31,100 @@ class KasViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
 
-    // STATE BARU KHUSUS UNTUK MENAMPILKAN TOTAL KAS DI HALAMAN DEPAN
-    private val _totalKas = MutableStateFlow<Double?>(null)
-    private val _totalKasMabar = MutableStateFlow<Double?>(null)
+    // --- STATE TOTAL KAS DASHBOARD ---
+    private val _totalKas = MutableStateFlow<Double?>(null) // Kas Coaching
+    private val _totalKasMabar = MutableStateFlow<Double?>(null) // Kas Mabar
 
     val totalKas: StateFlow<Double?> = _totalKas
     val totalKasMabar: StateFlow<Double?> = _totalKasMabar
 
-    // State untuk menyimpan daftar riwayat transaksi
-// --- UBAH DARI mutableStateOf MENJADI MutableStateFlow ---
+    // --- STATE RIWAYAT TRANSAKSI ---
     private val _recentTransactions = MutableStateFlow<List<TransactionItem>>(emptyList())
     val recentTransactions: StateFlow<List<TransactionItem>> = _recentTransactions
-    // STATE UNTUK ANIMASI TOMBOL REFRESH
+
+    // --- STATE REFRESH & PAGINASI ---
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
-    // Otomatis jalankan auto-refresh saat aplikasi dibuka
+    private val _hasMore = MutableStateFlow(false)
+    val hasMore: StateFlow<Boolean> = _hasMore
+
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
+
+    // Variabel Paginasi
+    private var currentOffset = 0
+    private val PAGE_LIMIT = 10
+
     init {
         startAutoRefresh()
     }
 
-    // Fungsi Auto-Refresh setiap 30 detik
     private fun startAutoRefresh() {
         viewModelScope.launch {
             while (isActive) {
                 fetchTotalKas()
-                delay(300_000) // Jeda 5 menit
+                delay(300_000) // Auto-refresh setiap 5 menit
             }
         }
     }
 
-    // Ubah jadi public (hapus private) agar bisa dipanggil dari tombol UI
+    // Fetch Halaman Pertama (Reset Offset)
     fun fetchTotalKas() {
+        currentOffset = 0
         viewModelScope.launch {
-            _isRefreshing.value = true // Nyalakan animasi muter
+            _isRefreshing.value = true
             try {
-                val response = RetrofitClient.apiService.getTotalKas()
+                val response = RetrofitClient.apiService.getTotalKas(limit = PAGE_LIMIT, offset = currentOffset)
                 if (response.status == "success") {
                     _totalKas.value = response.totalKasCoaching
                     _totalKasMabar.value = response.totalKasMabar
-                    response.recentTransactions?.let {
-                        _recentTransactions.value = it
-                    }
+                    _recentTransactions.value = response.recentTransactions ?: emptyList()
+                    _hasMore.value = response.hasMore ?: false
                 }
             } catch (e: Exception) {
-                // Jika gagal (misal tidak ada internet), biarkan state sebelumnya
+                // Pertahankan state lama jika koneksi gagal
             } finally {
-                _isRefreshing.value = false // Matikan animasi muter
+                _isRefreshing.value = false
             }
         }
     }
 
-    fun submitData(name: String, amount: String, weekNumber: String, description: String, isPemasukan: Boolean, cashType: String) {
-        val amountInt = amount.replace(Regex("[^0-9]"), "").toIntOrNull()
-        if (name.isBlank() || amountInt == null) {
+    // Fetch Halaman Berikutnya (Load More Append)
+    fun loadMoreTransactions() {
+        if (_isLoadingMore.value || !_hasMore.value) return
+
+        _isLoadingMore.value = true
+        currentOffset += PAGE_LIMIT
+
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.getTotalKas(limit = PAGE_LIMIT, offset = currentOffset)
+                if (response.status == "success") {
+                    val newItems = response.recentTransactions ?: emptyList()
+                    _recentTransactions.value = _recentTransactions.value + newItems
+                    _hasMore.value = response.hasMore ?: false
+                } else {
+                    currentOffset -= PAGE_LIMIT // Rollback offset jika gagal
+                }
+            } catch (e: Exception) {
+                currentOffset -= PAGE_LIMIT // Rollback offset jika exception
+            } finally {
+                _isLoadingMore.value = false
+            }
+        }
+    }
+
+    fun submitData(
+        name: String,
+        amount: String,
+        weekNumber: String,
+        description: String,
+        isPemasukan: Boolean,
+        cashType: String
+    ) {
+        val amountLong = amount.replace(Regex("[^0-9]"), "").toLongOrNull()
+        if (name.isBlank() || amountLong == null) {
             _uiState.value = UiState.Error("Nama dan Nominal harus diisi dengan benar.")
             return
         }
@@ -94,16 +134,14 @@ class KasViewModel : ViewModel() {
         val desc = description.ifBlank { null }
         val cash = cashType.ifBlank { null }
 
-
         _uiState.value = UiState.Loading
 
         viewModelScope.launch {
             try {
-                val request = KasRequest(name, amountInt, week, type, desc,cash)
+                val request = KasRequest(name, amountLong , week, type, desc, cash)
                 val response = RetrofitClient.apiService.submitKas(request)
 
                 if (response.status == "success") {
-                    // Update juga nilai total kas di dashboard depan
                     _totalKas.value = response.totalKasCoaching
                     _totalKasMabar.value = response.totalKasMabar
 
@@ -112,11 +150,14 @@ class KasViewModel : ViewModel() {
                         totalKas = response.totalKasCoaching ?: 0.0,
                         totalKasMabar = response.totalKasMabar ?: 0.0,
                         submittedName = name,
-                        submittedAmount = amountInt,
+                        submittedAmount = amountLong,
                         submittedType = type,
                         submittedCashType = cash,
                         submittedDesc = desc
                     )
+
+                    // Refresh daftar transaksi agar transaksi baru langsung muncul di baris paling atas
+                    fetchTotalKas()
                 } else {
                     _uiState.value = UiState.Error("Gagal: ${response.message}")
                 }

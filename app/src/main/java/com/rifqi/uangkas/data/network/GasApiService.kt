@@ -7,11 +7,12 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 
 import okhttp3.OkHttpClient
+import retrofit2.http.Query
 import java.util.concurrent.TimeUnit
 // Request Payload
 data class KasRequest(
     val name: String,
-    val amount: Int,
+    val amount: Long,
     val weekNumber: String?,
     val type: String, // "pemasukan" atau "pengeluaran"
     val description: String?,
@@ -19,7 +20,7 @@ data class KasRequest(
     )
 data class TransactionItem(
     val timestamp: String,
-    val name: String,
+    val name:   String,
     val weekNumber: String,
     val type: String,
     val amount: Double,
@@ -32,6 +33,7 @@ data class KasResponse(
     val message: String,
     val totalKasCoaching: Double?,
     val totalKasMabar: Double?,
+    val hasMore: Boolean? = false,
     val recentTransactions: List<TransactionItem>? = null
 )
 
@@ -43,8 +45,13 @@ interface GasApiService {
     @POST("YOUR_ENDPOINT")
     suspend fun submitKas(@Body request: KasRequest): KasResponse
 
+//    @GET("macros/s/AKfycbydvnqd7FHPKuQizGoJhLjV_v6NBhXUUu49r-dnmKUG8cf219XWEyyEUzu0JbFKhCXtDg/exec")
+//    suspend fun getTotalKas(): KasResponse
     @GET("YOUR_ENDPOINT")
-    suspend fun getTotalKas(): KasResponse
+    suspend fun getTotalKas(
+        @Query("limit") limit: Int = 10,
+        @Query("offset") offset: Int = 0
+    ): KasResponse
 }
 
 // Retrofit Object Builder
