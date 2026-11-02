@@ -53,12 +53,14 @@ import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QiblaScreen(onBackClick: () -> Unit) {
+fun QiblaScreen(
+    isDarkTheme: Boolean, // 👈 Parameter tema dinamis
+    onBackClick: () -> Unit
+) {
     val context = LocalContext.current
     var azimuth by remember { mutableFloatStateOf(0f) }
 
     // --- STATE LOKASI DINAMIS GPS ---
-    // Default fallback jika GPS belum didapatkan: Depok (-6.4025, 106.7942)
     var userLat by remember { mutableDoubleStateOf(-6.4025) }
     var userLng by remember { mutableDoubleStateOf(106.7942) }
     var isLocationLoaded by remember { mutableStateOf(false) }
@@ -90,7 +92,6 @@ fun QiblaScreen(onBackClick: () -> Unit) {
     LaunchedEffect(hasLocationPermission) {
         if (hasLocationPermission) {
             try {
-                // Minta lokasi terkini yang akurat
                 fusedLocationClient.getCurrentLocation(
                     Priority.PRIORITY_HIGH_ACCURACY,
                     CancellationTokenSource().token
@@ -114,7 +115,7 @@ fun QiblaScreen(onBackClick: () -> Unit) {
         }
     }
 
-    // Perhitungan Sudut Kiblat (Dinamis berdasarkan userLat & userLng terkini)
+    // Perhitungan Sudut Kiblat (Dinamis berdasarkan lokasi terkini)
     val qiblaAngle = remember(userLat, userLng) { calculateQiblaDirection(userLat, userLng) }
 
     // Logika Sensor Kompas HP
@@ -159,9 +160,21 @@ fun QiblaScreen(onBackClick: () -> Unit) {
     }
 
     val statusColor by animateColorAsState(
-        targetValue = if (isFacingQibla) KstcGold else Color(0xFF10B981),
+        targetValue = if (isFacingQibla) KstcGold else (if (isDarkTheme) Color(0xFF10B981) else KstcDarkGreen),
         label = "StatusColor"
     )
+
+    // --- COLOR PALETTE ADAPTIF LIGHT & DARK MODE ---
+    val backgroundColor = if (isDarkTheme) Color(0xFF121212) else Color(0xFFF8F9FA)
+    val cardBgColor = if (isDarkTheme) {
+        if (isFacingQibla) KstcGold.copy(alpha = 0.15f) else Color(0xFF1E1E1E)
+    } else {
+        if (isFacingQibla) KstcGold.copy(alpha = 0.2f) else Color.White
+    }
+    val compassBgColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color.White
+    val innerReadoutBg = if (isDarkTheme) Color(0xFF121212).copy(alpha = 0.85f) else Color.White.copy(alpha = 0.95f)
+    val mainTextColor = if (isDarkTheme) Color.White else Color.Black
+    val subTextColor = if (isDarkTheme) Color.LightGray else Color.DarkGray
 
     Scaffold(
         topBar = {
@@ -179,7 +192,7 @@ fun QiblaScreen(onBackClick: () -> Unit) {
                 )
             )
         },
-        containerColor = Color(0xFF121212)
+        containerColor = backgroundColor
     ) { padding ->
         Column(
             modifier = Modifier
@@ -191,9 +204,7 @@ fun QiblaScreen(onBackClick: () -> Unit) {
         ) {
             // Header Status
             Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isFacingQibla) KstcGold.copy(alpha = 0.15f) else Color(0xFF1E1E1E)
-                ),
+                colors = CardDefaults.cardColors(containerColor = cardBgColor),
                 shape = RoundedCornerShape(16.dp),
                 border = if (isFacingQibla) androidx.compose.foundation.BorderStroke(1.5.dp, KstcGold) else null,
                 modifier = Modifier.fillMaxWidth()
@@ -213,7 +224,7 @@ fun QiblaScreen(onBackClick: () -> Unit) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = if (isFacingQibla) "Posisi HP sudah tepat dengan Ka'bah" else "Putar HP hingga ikon Ka'bah berada di puncak panah",
-                        color = Color.LightGray,
+                        color = subTextColor,
                         fontFamily = PlusJakartaSansFontFamily,
                         fontSize = 12.sp
                     )
@@ -255,37 +266,46 @@ fun QiblaScreen(onBackClick: () -> Unit) {
                         .size(280.dp)
                         .rotate(-animatedAzimuth)
                         .clip(CircleShape)
-                        .background(Color(0xFF1E1E1E))
-                        .border(2.dp, if (isFacingQibla) KstcGold else Color(0xFF333333), CircleShape)
+                        .background(compassBgColor)
+                        .border(
+                            width = 2.dp,
+                            color = if (isFacingQibla) KstcGold else (if (isDarkTheme) Color(0xFF333333) else Color(0xFFE5E7EB)),
+                            shape = CircleShape
+                        )
                 ) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         drawCompassWheel(
                             qiblaAngle = qiblaAngle,
                             isFacingQibla = isFacingQibla,
-                            goldColor = KstcGold
+                            goldColor = KstcGold,
+                            isDarkTheme = isDarkTheme
                         )
                     }
                 }
 
-                // Inner Readout
+                // Inner Readout (Angka Azimuth Real-time)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background(Color(0xFF121212).copy(alpha = 0.85f))
-                        .border(1.dp, Color(0xFF333333), CircleShape)
+                        .background(innerReadoutBg)
+                        .border(
+                            width = 1.dp,
+                            color = if (isDarkTheme) Color(0xFF333333) else Color(0xFFE5E7EB),
+                            shape = CircleShape
+                        )
                         .padding(20.dp)
                 ) {
                     Text(
                         text = "${azimuth.toInt()}°",
-                        color = Color.White,
+                        color = mainTextColor,
                         fontFamily = PlusJakartaSansFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 28.sp
                     )
                     Text(
                         text = "Kiblat: ${qiblaAngle.toInt()}°",
-                        color = KstcGold,
+                        color = if (isDarkTheme) KstcGold else KstcDarkGreen,
                         fontFamily = PlusJakartaSansFontFamily,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
@@ -311,7 +331,8 @@ fun QiblaScreen(onBackClick: () -> Unit) {
 private fun DrawScope.drawCompassWheel(
     qiblaAngle: Float,
     isFacingQibla: Boolean,
-    goldColor: Color
+    goldColor: Color,
+    isDarkTheme: Boolean
 ) {
     val center = Offset(size.width / 2, size.height / 2)
     val radius = size.minDimension / 2
@@ -319,7 +340,7 @@ private fun DrawScope.drawCompassWheel(
     val textPaint = android.graphics.Paint().apply {
         isAntiAlias = true
         textSize = 10.sp.toPx()
-        color = android.graphics.Color.GRAY
+        color = if (isDarkTheme) android.graphics.Color.GRAY else android.graphics.Color.DKGRAY
         textAlign = android.graphics.Paint.Align.CENTER
         typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
@@ -327,7 +348,7 @@ private fun DrawScope.drawCompassWheel(
     val cardinalPaint = android.graphics.Paint().apply {
         isAntiAlias = true
         textSize = 13.sp.toPx()
-        color = android.graphics.Color.WHITE
+        color = if (isDarkTheme) android.graphics.Color.WHITE else android.graphics.Color.BLACK
         textAlign = android.graphics.Paint.Align.CENTER
         typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
@@ -346,8 +367,14 @@ private fun DrawScope.drawCompassWheel(
         val endX = center.x + endR * cos(angleRad).toFloat()
         val endY = center.y + endR * sin(angleRad).toFloat()
 
+        val tickColor = if (isMajor) {
+            if (isDarkTheme) Color.LightGray else Color.Gray
+        } else {
+            if (isDarkTheme) Color.DarkGray else Color.LightGray
+        }
+
         drawLine(
-            color = if (isMajor) Color.LightGray else Color.DarkGray,
+            color = tickColor,
             start = Offset(startX, startY),
             end = Offset(endX, endY),
             strokeWidth = if (isMajor) 2.dp.toPx() else 1.dp.toPx()
@@ -368,7 +395,7 @@ private fun DrawScope.drawCompassWheel(
 
             val paint = if (degree % 90 == 0) {
                 cardinalPaint.apply {
-                    color = if (degree == 0) android.graphics.Color.RED else android.graphics.Color.WHITE
+                    color = if (degree == 0) android.graphics.Color.RED else (if (isDarkTheme) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
                 }
             } else {
                 textPaint
@@ -387,7 +414,7 @@ private fun DrawScope.drawCompassWheel(
     val kaabaY = center.y + kaabaR * sin(qiblaRad).toFloat()
 
     drawCircle(
-        color = if (isFacingQibla) goldColor else Color.Black,
+        color = if (isFacingQibla) goldColor else (if (isDarkTheme) Color.Black else Color.White),
         radius = 16.dp.toPx(),
         center = Offset(kaabaX, kaabaY)
     )

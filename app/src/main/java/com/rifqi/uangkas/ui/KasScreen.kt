@@ -33,10 +33,14 @@ fun KasScreen(
     // Percabangan Tampilan Layar Utama vs Sub-screen Fitur
     when {
         showQiblaScreen -> {
-            QiblaScreen(onBackClick = { showQiblaScreen = false })
+            QiblaScreen(
+                isDarkTheme = isDarkTheme, // 👈 Teruskan state tema
+                onBackClick = { showQiblaScreen = false })
         }
         showTennisScoreScreen -> {
-            TennisScoreScreen(onBackClick = { showTennisScoreScreen = false })
+            TennisScoreScreen(
+                isDarkTheme = isDarkTheme, // 👈 Teruskan state tema
+                onBackClick = { showTennisScoreScreen = false })
         }
         else -> {
             Scaffold(
