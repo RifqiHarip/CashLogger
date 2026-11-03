@@ -48,24 +48,32 @@ fun TennisScoreScreen(
     var showFinishDialog by remember { mutableStateOf(false) }
     var showHistorySheet by remember { mutableStateOf(false) }
 
+    // Lock Landscape Mode & Immersive Fullscreen (Hide Status Bar & Navigation Bar)
     DisposableEffect(Unit) {
         val activity = context as? Activity
         val originalOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         val window = activity?.window
 
+        // 1. Ubah orientasi ke Landscape
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
+        // 2. Sembunyikan Status Bar DAN Navigation Bar
         window?.let { w ->
             val insetsController = WindowCompat.getInsetsController(w, w.decorView)
-            insetsController.hide(WindowInsetsCompat.Type.statusBars())
+
+            // Sembunyikan seluruh System Bars (Status Bar + Nav Bar)
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
+
+            // Pengguna masih bisa swipe dari pinggir layar untuk memunculkan sementara (transient)
             insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
 
         onDispose {
+            // Kembalikan orientasi dan munculkan kembali System Bars saat keluar dari layar skor
             activity?.requestedOrientation = originalOrientation
             window?.let { w ->
                 val insetsController = WindowCompat.getInsetsController(w, w.decorView)
-                insetsController.show(WindowInsetsCompat.Type.statusBars())
+                insetsController.show(WindowInsetsCompat.Type.systemBars())
             }
         }
     }
