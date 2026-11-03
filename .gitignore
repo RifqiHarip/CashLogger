@@ -13,3 +13,5 @@
 .externalNativeBuild
 .cxx
 local.properties
+apiDev.txt
+/apiDev.txt

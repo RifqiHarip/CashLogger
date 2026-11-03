@@ -40,8 +40,6 @@ data class KasResponse(
 // Retrofit Interface
 interface GasApiService {
     // YOUR_ENDPOINT
-    // macros/s/AKfycbxfC4BfNepCntX9ZbP0GlCiJwmkMaDtU721NrlQiOIfmnlzX0Etxq1kqXdppvIRjNItQg/exec Main
-    // macros/s/AKfycbydvnqd7FHPKuQizGoJhLjV_v6NBhXUUu49r-dnmKUG8cf219XWEyyEUzu0JbFKhCXtDg/exec Dev
     @POST("YOUR_ENDPOINT")
     suspend fun submitKas(@Body request: KasRequest): KasResponse
 
