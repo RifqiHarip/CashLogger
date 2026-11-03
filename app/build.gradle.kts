@@ -13,8 +13,8 @@ android {
         applicationId = "com.rifqi.uangkas"
         minSdk = 24
         targetSdk = 37
-        versionCode = 8
-        versionName = "1.4.3.1"
+        versionCode = 9
+        versionName = "1.4.3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

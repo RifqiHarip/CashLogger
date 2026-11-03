@@ -1,14 +1,17 @@
 package com.rifqi.uangkas.ui
 
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,46 +19,44 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.rifqi.uangkas.ui.theme.KstcDarkGreen
-import com.rifqi.uangkas.ui.theme.KstcGold
-import com.rifqi.uangkas.ui.theme.PlusJakartaSansFontFamily
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.rifqi.uangkas.ui.theme.KstcDarkGreen
+import com.rifqi.uangkas.ui.theme.KstcGold
+import com.rifqi.uangkas.ui.theme.PlusJakartaSansFontFamily
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @Composable
 fun TennisScoreScreen(
     viewModel: TennisScoreViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-    isDarkTheme: Boolean, // 👈 Parameter tema
+    isDarkTheme: Boolean,
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
     val state by viewModel.scoreState.collectAsState()
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showFinishDialog by remember { mutableStateOf(false) }
 
-    // Lock Landscape Mode & Immersive Fullscreen (Hide Status Bar)
     DisposableEffect(Unit) {
         val activity = context as? Activity
         val originalOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         val window = activity?.window
 
-        // 1. Ubah orientasi ke Landscape
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
-        // 2. Sembunyikan Status Bar (Baterai, Sinyal, Jam)
         window?.let { w ->
             val insetsController = WindowCompat.getInsetsController(w, w.decorView)
-            // Sembunyikan status bar (atau ganti dengan systemBars() jika ingin menyembunyikan nav bar bawah juga)
             insetsController.hide(WindowInsetsCompat.Type.statusBars())
-            // Ijinkan swipe sementara dari pinggir layar untuk melihat jam/baterai jika diperlukan
             insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
 
         onDispose {
-            // Kembalikan orientasi dan tampilkan kembali Status Bar saat keluar layar
             activity?.requestedOrientation = originalOrientation
             window?.let { w ->
                 val insetsController = WindowCompat.getInsetsController(w, w.decorView)
@@ -63,9 +64,28 @@ fun TennisScoreScreen(
             }
         }
     }
+
+    LaunchedEffect(state.isGameOver) {
+        if (state.isGameOver) {
+            viewModel.saveCurrentMatch()
+            showFinishDialog = true
+        }
+    }
+
+    fun shareToWhatsApp(message: String) {
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, message)
+            type = "text/plain"
+        }
+        val shareIntent = Intent.createChooser(sendIntent, "Bagikan Skor Match via")
+        context.startActivity(shareIntent)
+    }
+
     var editTeam1 by remember(state.player1Name) { mutableStateOf(state.player1Name) }
     var editTeam2 by remember(state.player2Name) { mutableStateOf(state.player2Name) }
     var editIsNoAd by remember(state.isNoAdMode) { mutableStateOf(state.isNoAdMode) }
+    var editTargetGames by remember(state.targetGames) { mutableStateOf(state.targetGames.toString()) }
 
     val screenBgColor = if (isDarkTheme) Color(0xFF121212) else Color(0xFFF3F4F6)
     val pillBgColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color.White
@@ -100,6 +120,7 @@ fun TennisScoreScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali", tint = iconColor)
                     }
 
+                    // Pill Header Menampilkan Target Game (misal: "FIRST TO 6 GAMES | GOLDEN POINT")
                     Surface(
                         onClick = { showSettingsDialog = true },
                         color = pillBgColor,
@@ -109,8 +130,9 @@ fun TennisScoreScreen(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val modeText = if (state.isTiebreak) "TIEBREAK" else if (state.isNoAdMode) "GOLDEN POINT" else "ADVANTAGE"
                             Text(
-                                text = if (state.isTiebreak) "TIEBREAK" else if (state.isNoAdMode) "GOLDEN POINT" else "ADVANTAGE",
+                                text = "FIRST TO ${state.targetGames} GAMES • $modeText",
                                 color = if (isDarkTheme) KstcGold else KstcDarkGreen,
                                 fontFamily = PlusJakartaSansFontFamily,
                                 fontWeight = FontWeight.Bold,
@@ -126,6 +148,17 @@ fun TennisScoreScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    IconButton(
+                        onClick = {
+                            if (state.p1Games > 0 || state.p2Games > 0) {
+                                showFinishDialog = true
+                            }
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "Bagikan Skor", tint = KstcGold)
+                    }
+
                     IconButton(
                         onClick = { viewModel.resetMatch() },
                         modifier = Modifier.size(32.dp)
@@ -179,36 +212,96 @@ fun TennisScoreScreen(
         }
     }
 
+// DIALOG PENGATURAN PERTANDINGAN (RESPONSIF & SCROLLABLE LANDSCAPE)
     if (showSettingsDialog) {
+        val scrollState = rememberScrollState()
+
         AlertDialog(
             onDismissRequest = { showSettingsDialog = false },
-            title = { Text("Pengaturan Pertandingan", fontFamily = PlusJakartaSansFontFamily, fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = "Pengaturan Pertandingan",
+                    fontFamily = PlusJakartaSansFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState), // 👈 Mengaktifkan scroll vertikal pada dialog
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Input Nama Tim 1
                     OutlinedTextField(
                         value = editTeam1,
                         onValueChange = { editTeam1 = it },
-                        label = { Text("Nama Tim / Pemain 1") },
+                        label = { Text("Nama Tim / Pemain 1", fontSize = 12.sp) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    // Input Nama Tim 2
                     OutlinedTextField(
                         value = editTeam2,
                         onValueChange = { editTeam2 = it },
-                        label = { Text("Nama Tim / Pemain 2") },
+                        label = { Text("Nama Tim / Pemain 2", fontSize = 12.sp) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
+                    )
+
+                    // SEKSI PEMILIHAN TARGET GAME
+                    Text(
+                        text = "Target Pemenang Game (First to N Games):",
+                        fontFamily = PlusJakartaSansFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp
                     )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        listOf(4, 6, 8).forEach { preset ->
+                            FilterChip(
+                                selected = editTargetGames == preset.toString(),
+                                onClick = { editTargetGames = preset.toString() },
+                                label = { Text("$preset G", fontSize = 11.sp) }
+                            )
+                        }
+                        OutlinedTextField(
+                            value = editTargetGames,
+                            onValueChange = { editTargetGames = it.filter { char -> char.isDigit() } },
+                            label = { Text("Custom", fontSize = 11.sp) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Divider(color = Color.LightGray.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 2.dp))
+
+                    // SEKSI TOGGLE GOLDEN POINT / ADVANTAGE
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { editIsNoAd = !editIsNoAd },
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = if (editIsNoAd) "Golden Point (No-Ad)" else "Advantage Mode", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text(text = if (editIsNoAd) "Poin 40-40 langsung penentuan" else "Poin 40-40 butuh selisih 2 poin (AD)", fontSize = 11.sp, color = Color.Gray)
+                            Text(
+                                text = if (editIsNoAd) "Golden Point (No-Ad)" else "Advantage Mode",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = if (editIsNoAd) "Poin 40-40 langsung penentuan" else "Poin 40-40 butuh selisih 2 poin (AD)",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
                         }
                         Switch(
                             checked = editIsNoAd,
@@ -221,7 +314,8 @@ fun TennisScoreScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.updateMatchSettings(editTeam1, editTeam2, editIsNoAd)
+                        val target = editTargetGames.toIntOrNull() ?: 6
+                        viewModel.updateMatchSettings(editTeam1, editTeam2, editIsNoAd, target)
                         showSettingsDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = KstcDarkGreen)
@@ -231,6 +325,63 @@ fun TennisScoreScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showSettingsDialog = false }) { Text("Batal") }
+            }
+        )
+    }
+
+    if (showFinishDialog) {
+        val currentRecord = MatchRecord(
+            team1 = state.player1Name,
+            team2 = state.player2Name,
+            gamesTeam1 = state.p1Games,
+            gamesTeam2 = state.p2Games,
+            targetGames = state.targetGames,
+            mode = if (state.isNoAdMode) "Golden Point (No-Ad)" else "Advantage Mode",
+            dateText = "Pertandingan Ini"
+        )
+
+        AlertDialog(
+            onDismissRequest = { showFinishDialog = false },
+            title = {
+                Text(
+                    text = if (state.isGameOver) "🏆 Pertandingan Selesai!" else "📊 Ringkasan Skor",
+                    fontFamily = PlusJakartaSansFontFamily,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "${state.player1Name} (${state.p1Games})  VS  (${state.p2Games}) ${state.player2Name}",
+                        fontFamily = PlusJakartaSansFontFamily,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 16.sp,
+                        color = KstcDarkGreen
+                    )
+                    Text(
+                        text = "Ingin membagikan hasil pertandingan ini ke grup WhatsApp KSTC?",
+                        fontFamily = PlusJakartaSansFontFamily,
+                        fontSize = 13.sp,
+                        color = Color.Gray
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val waText = viewModel.formatWhatsAppMessage(currentRecord)
+                        shareToWhatsApp(waText)
+                        showFinishDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366))
+                ) {
+                    Text("Kirim ke WhatsApp", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFinishDialog = false }) {
+                    Text("Tutup")
+                }
             }
         )
     }
