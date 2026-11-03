@@ -219,7 +219,7 @@ fun SettingsScreen(
                     fontSize = 14.sp
                 )
                 Text(
-                    text = "Versi 1.4.3.2",
+                    text = "Versi 1.4.4",
                     color = Color.Gray,
                     fontFamily = PlusJakartaSansFontFamily,
                     fontSize = 12.sp,
